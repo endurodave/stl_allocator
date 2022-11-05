@@ -20,6 +20,7 @@
 /// will occur in the reverse order so xallocInitDestroy is called last. This way,
 /// any static user objects relying on xallocator will be destroyed first before 
 /// xalloc_destroy() is called. 
+/// Embedded systems that never exit can remove the XallocInitDestroy class entirely. 
 class XallocInitDestroy
 {
 public:
@@ -76,7 +77,16 @@ void xalloc_stats();
         } \
         void operator delete(void* pObject) { \
             xfree(pObject); \
-        } 
+        } \
+        void* operator new(size_t size, void* mem) { \
+            return mem; \
+        } \
+        void* operator new[](size_t size) { \
+            return xmalloc(size); \
+        } \
+        void operator delete[](void* pData) { \
+            xfree(pData); \
+        }
 
 #ifdef __cplusplus 
 }
