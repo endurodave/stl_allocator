@@ -1,7 +1,9 @@
-#include "xallocator.h"
 #include "Allocator.h"
+#include "xallocator.h"
 #include "Fault.h"
+#include <cstring>
 #include <iostream>
+#include <mutex>
 
 using namespace std;
 
@@ -9,7 +11,6 @@ using namespace std;
 #define CHAR_BIT	8 
 #endif
 
-static CRITICAL_SECTION _criticalSection; 
 static BOOL _xallocInitialized = FALSE;
 
 // Define STATIC_POOLS to switch from heap blocks mode to static pools mode
@@ -85,40 +86,13 @@ T nexthigher(T k)
     return k+1;
 }
 
-/// Create the xallocator lock. Call only one time at startup. 
-static void lock_init()
+static std::mutex& get_mutex()
 {
-	BOOL success = InitializeCriticalSectionAndSpinCount(&_criticalSection, 0x00000400);
-	ASSERT_TRUE(success != 0);
-	_xallocInitialized = TRUE;
+	static std::mutex _mutex;
+	return _mutex;
 }
 
-/// Destroy the xallocator lock.
-static void lock_destroy()
-{
-	DeleteCriticalSection(&_criticalSection);
-	_xallocInitialized = FALSE;
-}
-
-/// Lock the shared resource. 
-static inline void lock_get()
-{
-	if (_xallocInitialized == FALSE)
-		return;
-
-	EnterCriticalSection(&_criticalSection); 
-}
-
-/// Unlock the shared resource. 
-static inline void lock_release()
-{
-	if (_xallocInitialized == FALSE)
-		return;
-
-	LeaveCriticalSection(&_criticalSection);
-}
-
-/// Stored a pointer to the allocator instance within the block region. 
+// Stored a pointer to the allocator instance within the block region. 
 ///	a pointer to the client's area within the block.
 /// @param[in] block - a pointer to the raw memory block. 
 ///	@param[in] size - the client requested size of the memory block.
@@ -201,9 +175,9 @@ static inline void insert_allocator(Allocator* allocator)
 /// API is called. XallocInitDestroy constructor calls this function automatically. 
 extern "C" void xalloc_init()
 {
-	lock_init();
-
 #ifdef STATIC_POOLS
+	get_mutex().lock();
+
 	// For STATIC_POOLS mode, the allocators must be initialized before any other
 	// static user class constructor is run. Therefore, use placement new to initialize
 	// each allocator into the previously reserved static memory locations.
@@ -233,6 +207,8 @@ extern "C" void xalloc_init()
 	_allocators[9] = (Allocator*)&_allocator1024;
 	_allocators[10] = (Allocator*)&_allocator2048;
 	_allocators[11] = (Allocator*)&_allocator4096;
+
+	get_mutex().unlock();
 #endif
 }
 
@@ -240,7 +216,7 @@ extern "C" void xalloc_init()
 /// ~XallocInitDestroy destructor calls this function automatically. 
 extern "C" void xalloc_destroy()
 {
-	lock_get();
+	get_mutex().lock();
 
 #ifdef STATIC_POOLS
 	for (INT i=0; i<MAX_ALLOCATORS; i++)
@@ -258,9 +234,7 @@ extern "C" void xalloc_destroy()
 	}
 #endif
 
-	lock_release();
-
-	lock_destroy();
+	get_mutex().unlock();
 }
 
 /// Get an Allocator instance based upon the client's requested block size.
@@ -309,13 +283,13 @@ extern "C" Allocator* xallocator_get_allocator(size_t size)
 /// @return	A pointer to the client's memory block.
 extern "C" void *xmalloc(size_t size)
 {
-	lock_get();
+	get_mutex().lock();
 
 	// Allocate a raw memory block 
 	Allocator* allocator = xallocator_get_allocator(size);
 	void* blockMemoryPtr = allocator->Allocate(sizeof(Allocator*) + size);
 
-	lock_release();
+	get_mutex().unlock();
 
 	// Set the block Allocator* within the raw memory block region
 	void* clientsMemoryPtr = set_block_allocator(blockMemoryPtr, allocator);
@@ -336,12 +310,12 @@ extern "C" void xfree(void* ptr)
 	// Convert the client pointer into the original raw block pointer
 	void* blockPtr = get_block_ptr(ptr);
 
-	lock_get();
+	get_mutex().lock();
 
 	// Deallocate the block 
 	allocator->Deallocate(blockPtr);
 
-	lock_release();
+	get_mutex().unlock();
 }
 
 /// Reallocates a memory block previously allocated with xalloc.
@@ -383,7 +357,7 @@ extern "C" void *xrealloc(void *oldMem, size_t size)
 /// Output xallocator usage statistics
 extern "C" void xalloc_stats()
 {
-	lock_get();
+	get_mutex().lock();
 
 	for (INT i=0; i<MAX_ALLOCATORS; i++)
 	{
@@ -398,7 +372,7 @@ extern "C" void xalloc_stats()
 		cout << endl;
 	}
 
-	lock_release();
+	get_mutex().unlock();
 }
 
 
