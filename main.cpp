@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include <new>
 #include <iostream>
 #include "xlist.h"
