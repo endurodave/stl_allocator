@@ -3,6 +3,8 @@ Protect against heap fragmentation faults and improve execution speed with a fix
 
 Originally published on CodeProject at: <a href="https://www.codeproject.com/Articles/1089905/A-Custom-STL-std-allocator-Replacement-Improves-Pe"><strong>A Custom STL std::allocator Replacement Improves Performance</strong></a>
 
+<p><a href="https://www.cmake.org/">CMake</a>&nbsp;is used to create the build files. CMake is free and open-source software. Windows, Linux and other toolchains are supported. See the <strong>CMakeLists.txt </strong>file for more information.</p>
+
 <h2>Introduction</h2>
 
 <p>This is my third and final article concerning fixed block memory allocators here on Code Project. This time, we&#39;ll create an alternate C++ Standard Library <code>std::allocator</code> memory manager using the groundwork laid by the first two articles.&nbsp;</p>
