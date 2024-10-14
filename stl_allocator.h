@@ -1,7 +1,8 @@
 #ifndef _STL_ALLOCATOR_H
 #define _STL_ALLOCATOR_H
 
-// See http://www.codeproject.com/Articles/1089905/A-Custom-STL-std-allocator-Replacement-Improves-Performance-
+// @see https://github.com/endurodave/stl_allocator
+// David Lafreniere
 
 #include "xallocator.h"
 #include "Fault.h"
