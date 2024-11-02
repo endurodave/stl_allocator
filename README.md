@@ -39,7 +39,7 @@ std::list&lt;int&gt; myList;</pre>
 
 <h2>xallocator&nbsp;&nbsp; &nbsp;</h2>
 
-<p>Most of the heavy lifting for the new fixed block STL allocator comes from the underlying <code>xallocator</code> as described within my article &quot;<a href="http://www.codeproject.com/Articles/1084801/Replace-malloc-free-with-a-Fast-Fixed-Block-Memory"><strong>Replace malloc/free with a Fast Fixed Block Memory Allocator</strong></a>&quot;. As the title states, this module replaces <code>malloc</code>/<code>free </code>with new fixed block <code>xmalloc</code>/<code>xfree</code> versions.&nbsp;</p>
+<p>Most of the heavy lifting for the new fixed block STL allocator comes from the underlying <code>xallocator</code> as described within my article &quot;<a href="https://github.com/endurodave/xallocator"><strong>Replace malloc/free with a Fast Fixed Block Memory Allocator</strong></a>&quot;. As the title states, this module replaces <code>malloc</code>/<code>free </code>with new fixed block <code>xmalloc</code>/<code>xfree</code> versions.&nbsp;</p>
 
 <p>To the user, these replacement functions operate in the same way as the standard CRT versions except for the fixed block feature. In short, <code>xallocator</code> has two modes of operation: <em>static pools</em>, where all memory is obtained from pre-declared static memory, or <em>heap blocks</em>, where blocks are obtained from the global heap but recycled for later use when freed. See the aforementioned article for implementation details.&nbsp;</p>
 
