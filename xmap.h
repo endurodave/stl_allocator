@@ -4,6 +4,14 @@
 #include "stl_allocator.h"
 #include <map>
 
+// xmap uses a fix-block memory allocator
+template <typename Key, typename Value, typename Alloc = stl_allocator<std::pair<const Key, Value>>>
+using xmap = std::map<Key, Value, std::less<Key>, Alloc>;
+
+template <typename Key, typename Value, typename Alloc = stl_allocator<std::pair<const Key, Value>>>
+using xmultimap = std::multimap<Key, Value, std::less<Key>, Alloc>;
+
+#if 0  // Deprecated
 template<class _Kty,
 	class _Ty,
 	class _Pr = std::less<_Kty>,
@@ -21,6 +29,7 @@ template<class _Kty,
 		: public std::multimap<_Kty, _Ty, _Pr, _Alloc>
 	{
 	};
+#endif
 
 #endif
 

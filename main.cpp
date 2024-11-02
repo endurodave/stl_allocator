@@ -6,6 +6,7 @@
 #include "xset.h"
 #include "xsstream.h"
 #include "xstring.h"
+#include "Fault.h"
 
 // @see https://github.com/endurodave/stl_allocator
 // David Lafreniere

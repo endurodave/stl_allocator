@@ -47,54 +47,79 @@ std::list&lt;int&gt; myList;</pre>
 
 <p>The class <code>stl_allocator </code>is the fixed block STL-compatible implementation. This class is used as an alternative to <code>std::allocator</code>.&nbsp;</p>
 
-<pre lang="C++">
-template &lt;typename T&gt;
-class stl_allocator
+```cpp
+#ifndef _STL_ALLOCATOR_H
+#define _STL_ALLOCATOR_H
+
+// @see https://github.com/endurodave/stl_allocator
+// David Lafreniere
+
+#include "xallocator.h"
+#include <memory>  // For std::allocator and std::allocator_traits
+
+// Forward declaration for stl_allocator<void>
+template <typename T>
+class stl_allocator;
+
+// Specialization for `void`, but we no longer need to define `pointer` and `const_pointer`
+template <>
+class stl_allocator<void> 
 {
 public:
-    typedef size_t size_type;
-    typedef ptrdiff_t difference_type;
-    typedef T* pointer;
-    typedef const T* const_pointer;
-    typedef T&amp; reference;
-    typedef const T&amp; const_reference;
-    typedef T value_type;
+	typedef void value_type;
 
-    stl_allocator(){}
-    ~stl_allocator(){}
+	template <class U>
+	struct rebind { typedef stl_allocator<U> other; };
+};
 
-    template &lt;class U&gt; struct rebind { typedef stl_allocator&lt;U&gt; other; };
-    template &lt;class U&gt; stl_allocator(const stl_allocator&lt;U&gt;&amp;){}
+// Define the custom stl_allocator inheriting from std::allocator
+template <typename T>
+class stl_allocator : public std::allocator<T> 
+{
+public:
+	typedef size_t size_type;
+	typedef ptrdiff_t difference_type;
+	typedef T* pointer;
+	typedef const T* const_pointer;
+	typedef T& reference;
+	typedef const T& const_reference;
+	typedef T value_type;
 
-    pointer address(reference x) const {return &amp;x;}
-    const_pointer address(const_reference x) const {return &amp;x;}
-    size_type max_size() const throw() {return size_t(-1) / sizeof(value_type);}
+	// Default constructor
+	stl_allocator() {}
 
-    pointer allocate(size_type n, stl_allocator&lt;void&gt;::const_pointer hint = 0)
-    {
-        return static_cast&lt;pointer&gt;(xmalloc(n*sizeof(T)));
-    }
+	// Copy constructor
+	template <class U>
+	stl_allocator(const stl_allocator<U>&) {}
 
-    void deallocate(pointer p, size_type n)
-    {
-        xfree(p);
-    }
+	// Rebind struct
+	template <class U>
+	struct rebind { typedef stl_allocator<U> other; };
 
-    void construct(pointer p, const T&amp; val)
-    {
-        new(static_cast&lt;void*&gt;(p)) T(val);
-    }
+	// Override allocate method to use custom allocation function
+	pointer allocate(size_type n, typename std::allocator_traits<stl_allocator<void>>::const_pointer hint = 0) 
+	{
+		return static_cast<pointer>(xmalloc(n * sizeof(T)));
+	}
 
-    void construct(pointer p)
-    {
-        new(static_cast&lt;void*&gt;(p)) T();
-    }
+	// Override deallocate method to use custom deallocation function
+	void deallocate(pointer p, size_type n) 
+	{
+		xfree(p);
+	}
 
-    void destroy(pointer p)
-    {
-        p-&gt;~T();
-    }
-};</pre>
+	// You can inherit other methods like construct and destroy from std::allocator
+};
+
+// Comparison operators for compatibility
+template <typename T, typename U>
+inline bool operator==(const stl_allocator<T>&, const stl_allocator<U>) { return true; }
+
+template <typename T, typename U>
+inline bool operator!=(const stl_allocator<T>&, const stl_allocator<U>) { return false; }
+
+#endif 
+```
 
 <p>The code is really just a standard <code>std::allocator</code> interface. There are many examples online. The source attached to this article has been used on many different compilers (GCC, Keil, VisualStudio). The thing we&#39;re interested in is where to tap into the interface with our own memory manager. The methods of interest are:</p>
 
@@ -149,19 +174,19 @@ void deallocate(pointer p, size_type n)
 
 <p>The following code shows the complete <code>xlist</code> implementation. Notice <code>xlist</code> just inherits from <code>std::list</code>, but the key difference is the <code>_Ax</code> template argument defaults to <code>stl_allocator</code> and not <code>std::allocator</code>.&nbsp;</p>
 
-<pre lang="C++">
+```cpp
 #ifndef _XLIST_H
 #define _XLIST_H
 
-#include &quot;stl_allocator.h&quot;
-#include &lt;list&gt;
+#include "stl_allocator.h"
+#include <list>
 
-template&lt;class _Ty, class _Ax = stl_allocator&lt;_Ty&gt; &gt;
-class xlist : public std::list&lt;_Ty, _Ax&gt;
-{
-};
+// xlist uses a fix-block memory allocator
+template <typename T, typename Alloc = stl_allocator<T>>
+using xlist = std::list<T, Alloc>;
 
-#endif</pre>
+#endif
+```
 
 <p>Each of the &ldquo;<code>x</code>&rdquo; versions of the STL container is used just like the <code>std</code> version except all allocations are handled by <code>stl_allocator</code>. For instance:</p>
 
