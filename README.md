@@ -1,11 +1,30 @@
 # A Custom STL std::allocator Replacement Improves Performance
 Protect against heap fragmentation faults and improve execution speed with a fixed block alternative to STL std::allocator.
 
+# Table of Contents
+
+- [A Custom STL std::allocator Replacement Improves Performance](#a-custom-stl-stdallocator-replacement-improves-performance)
+- [Table of Contents](#table-of-contents)
+- [Preface](#preface)
+- [Introduction](#introduction)
+- [std::allocator](#stdallocator)
+- [xallocator    ](#xallocator-)
+- [stl\_allocator](#stl_allocator)
+  - ["x" Containers](#x-containers)
+  - ["x" Strings](#x-strings)
+  - ["x" Streams](#x-streams)
+- [Benchmarking](#benchmarking)
+- [Reference Articles](#reference-articles)
+- [Benefits](#benefits)
+
+
+# Preface
+
 Originally published on CodeProject at: <a href="https://www.codeproject.com/Articles/1089905/A-Custom-STL-std-allocator-Replacement-Improves-Pe"><strong>A Custom STL std::allocator Replacement Improves Performance</strong></a>
 
 <p><a href="https://www.cmake.org/">CMake</a>&nbsp;is used to create the build files. CMake is free and open-source software. Windows, Linux and other toolchains are supported. See the <strong>CMakeLists.txt </strong>file for more information.</p>
 
-<h2>Introduction</h2>
+# Introduction
 
 <p>This is my third and final article concerning fixed block memory allocators here on Code Project. This time, we&#39;ll create an alternate C++ Standard Library <code>std::allocator</code> memory manager using the groundwork laid by the first two articles.&nbsp;</p>
 
@@ -15,7 +34,7 @@ Originally published on CodeProject at: <a href="https://www.codeproject.com/Art
 
 <p>This article describes an STL-compatible allocator implementation that relies upon a fixed block allocator for dispensing and reclaiming memory. The new allocator prevents faults caused by a fragmented heap and offer consistent allocation/deallocation execution times.&nbsp;</p>
 
-<h2>std::allocator</h2>
+# std::allocator
 
 <p>The STL <code>std::allocator</code> class provides the default memory allocation and deallocation strategy. If you examine code for a container class, such as <code>std::list</code>, you&#39;ll see the default <code>std::allocator</code> template argument. In this case, <code>allocator&lt;_Ty&gt;</code> is template class handling allocation duties for <code>_Ty</code> objects.</p>
 
@@ -37,13 +56,13 @@ std::list&lt;int&gt; myList;</pre>
 
 <p>An STL-allocator must adhere to specific interface requirements. This isn&#39;t an article on the how&#39;s and why&#39;s of the <code>std::allocator</code> API &ndash; there are many online references that explain this better than I. Instead, I&#39;ll focus on where to place the memory allocation/deallocation calls within an existing STL-allocator class interface and provide new &quot;x&quot; versions of all common containers to simplify usage.&nbsp;</p>
 
-<h2>xallocator&nbsp;&nbsp; &nbsp;</h2>
+# xallocator&nbsp;&nbsp; &nbsp;
 
 <p>Most of the heavy lifting for the new fixed block STL allocator comes from the underlying <code>xallocator</code> as described within my article &quot;<a href="https://github.com/endurodave/xallocator"><strong>Replace malloc/free with a Fast Fixed Block Memory Allocator</strong></a>&quot;. As the title states, this module replaces <code>malloc</code>/<code>free </code>with new fixed block <code>xmalloc</code>/<code>xfree</code> versions.&nbsp;</p>
 
 <p>To the user, these replacement functions operate in the same way as the standard CRT versions except for the fixed block feature. In short, <code>xallocator</code> has two modes of operation: <em>static pools</em>, where all memory is obtained from pre-declared static memory, or <em>heap blocks</em>, where blocks are obtained from the global heap but recycled for later use when freed. See the aforementioned article for implementation details.&nbsp;</p>
 
-<h2>stl_allocator</h2>
+# stl_allocator
 
 <p>The class <code>stl_allocator </code>is the fixed block STL-compatible implementation. This class is used as an alternative to <code>std::allocator</code>.&nbsp;</p>
 
@@ -148,7 +167,7 @@ void deallocate(pointer p, size_type n)
 
 <p>Of course, <code>stl_allocator</code> is a template class. Notice that the fixed block allocation duties are delegated to non-template functions <code>xmalloc()</code> and <code>xfree()</code>. This makes the instantiated code for each instance as small as possible.&nbsp;</p>
 
-<h2>&quot;x&quot; Containers</h2>
+## &quot;x&quot; Containers
 
 <p>The following STL container classes use fixed sized memory blocks that never change in size while the container is being utilized. The number of heap element/node blocks goes up and down, but block sizes are constant for a given container instantiation.</p>
 
@@ -208,7 +227,7 @@ myList.push_back(&quot;hello world&quot;);
 
 <p>A <code>std::string</code> also varies its requested memory size during execution, but typically, strings aren&#39;t used in an unbounded fashion. Meaning, in most cases you&#39;re not trying to store a 100K-byte string, whereas a <code>vector</code> you might actually do that. Therefore, <code>xstring</code>&#39;s are available as explained next.&nbsp;</p>
 
-<h2>&quot;x&quot; Strings</h2>
+## &quot;x&quot; Strings
 
 <p>New <code>x</code>-version of the standard and wide versions of the <code>string</code> classes are created.</p>
 
@@ -239,7 +258,7 @@ typedef std::basic_string&lt;wchar_t, std::char_traits&lt;wchar_t&gt;, stl_alloc
 xwstring s = L&quot;This is &quot;;
 s += L&quot;my string.&quot;;</pre>
 
-<h2>&quot;x&quot; Streams</h2>
+## &quot;x&quot; Streams
 
 <p>The <code>iostreams</code> C++ Standard Library offers powerful and easy-to-use string formatting by way of the <code>stream</code> classes.&nbsp;</p>
 
@@ -287,7 +306,7 @@ xstringstream myStringStream;
 myStringStream &lt;&lt; &quot;hello world &quot; &lt;&lt; 2016 &lt;&lt; ends;
 </pre>
 
-<h2>Benchmarking</h2>
+# Benchmarking
 
 <p>In my previous allocator articles, simple tests show the fixed block allocator is faster than the global heap. Now let&#39;s check the <code>stl_allocator</code> enabled containers to see they compare against <code>std::allocator</code> on a Windows PC.&nbsp;</p>
 
@@ -443,7 +462,7 @@ myList.clear();</pre>
 
 <p>While I don&#39;t write code for games, I can see how the lag associated with fragmentation and erratic allocation/deallocation times would effect game play.&nbsp;</p>
 
-<h2>Reference Articles</h2>
+# Reference Articles
 
 <ul>
 	<li><strong><a href="http://www.codeproject.com/Articles/1084801/Replace-malloc-free-with-a-Fast-Fixed-Block-Memory">Replace malloc/free with a Fast Fixed Block Memory Allocator</a></strong> by David Lafreniere</li>
@@ -451,7 +470,7 @@ myList.clear();</pre>
 	<li><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2271.html"><strong>EASTL -- Electronic Arts Standard Template Library</strong></a>&nbsp; by Paul Pedriana</li>
 </ul>
 
-<h2>Benefits</h2>
+# Benefits
 
 <p>STL is an extremely useful C++ library. Too often through, for medical devices I can&#39;t use it due to the possibility of a heap fragmentation memory fault. This leads to rolling your own custom container classes for each project instead of using an existing, well-tested library.&nbsp;</p>
 
