@@ -70,24 +70,33 @@ void *xrealloc(void *ptr, size_t size);
 /// Output allocator statistics to the standard output
 void xalloc_stats();
 
-// Macro to overload new/delete with xalloc/xfree  
+// Macro to overload new/delete with xalloc/xfree. Add macro to any class to enable
+// fixed-block memory allocation. Add to a base class provides fixed-block memory
+// for the base and all derived classes.
 #define XALLOCATOR \
     public: \
         void* operator new(size_t size) { \
             return xmalloc(size); \
         } \
-        void operator delete(void* pObject) { \
-            xfree(pObject); \
-        } \
         void* operator new(size_t size, void* mem) { \
             return mem; \
+        } \
+        void* operator new(size_t size, const std::nothrow_t& nt) { \
+            return xmalloc(size); \
         } \
         void* operator new[](size_t size) { \
             return xmalloc(size); \
         } \
+        void operator delete(void* pObject) { \
+            xfree(pObject); \
+        } \
+        void operator delete(void* pObject, const std::nothrow_t& nt) { \
+            xfree(pObject); \
+        } \
         void operator delete[](void* pData) { \
             xfree(pData); \
         }
+
 
 #ifdef __cplusplus 
 }
