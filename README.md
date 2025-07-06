@@ -7,11 +7,13 @@
 
 Protect against heap fragmentation faults and improve execution speed with a fixed block alternative to STL std::allocator.
 
+Originally published on CodeProject at: <a href="https://www.codeproject.com/Articles/1089905/A-Custom-STL-std-allocator-Replacement-Improves-Pe"><strong>A Custom STL std::allocator Replacement Improves Performance</strong></a>
+
 # Table of Contents
 
 - [A Custom STL std::allocator Replacement Improves Performance](#a-custom-stl-stdallocator-replacement-improves-performance)
 - [Table of Contents](#table-of-contents)
-- [Preface](#preface)
+- [Getting Started](#getting-started)
 - [Introduction](#introduction)
 - [std::allocator](#stdallocator)
 - [xallocator    ](#xallocator-)
@@ -24,11 +26,14 @@ Protect against heap fragmentation faults and improve execution speed with a fix
 - [Benefits](#benefits)
 
 
-# Preface
+# Getting Started
 
-Originally published on CodeProject at: <a href="https://www.codeproject.com/Articles/1089905/A-Custom-STL-std-allocator-Replacement-Improves-Pe"><strong>A Custom STL std::allocator Replacement Improves Performance</strong></a>
+[CMake](https://cmake.org/) is used to create the project build files on any C++ system including Windows, Linux, or an embedded system. 
 
-<p><a href="https://www.cmake.org/">CMake</a>&nbsp;is used to create the build files. CMake is free and open-source software. Windows, Linux and other toolchains are supported. See the <strong>CMakeLists.txt </strong>file for more information.</p>
+1. Clone the repository.
+2. From the repository root, run the following CMake command:   
+   `cmake -B Build .`
+3. Build and run the project within the `Build` directory. 
 
 # Introduction
 
