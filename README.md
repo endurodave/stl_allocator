@@ -14,6 +14,7 @@ Originally published on CodeProject at: <a href="https://www.codeproject.com/Art
 - [A Custom STL std::allocator Replacement Improves Performance](#a-custom-stl-stdallocator-replacement-improves-performance)
 - [Table of Contents](#table-of-contents)
 - [Getting Started](#getting-started)
+- [References](#references)
 - [Introduction](#introduction)
 - [std::allocator](#stdallocator)
 - [xallocator    ](#xallocator-)
@@ -34,6 +35,11 @@ Originally published on CodeProject at: <a href="https://www.codeproject.com/Art
 2. From the repository root, run the following CMake command:   
    `cmake -B Build .`
 3. Build and run the project within the `Build` directory. 
+
+# References
+
+* <a href="https://github.com/endurodave/Allocator">Allocator</a> - An efficient C++ fixed-block memory allocator.
+* <a href="https://github.com/endurodave/xallocator">xallocator</a> - A `malloc`/`free` fixed-block memory allocator replacement.  
 
 # Introduction
 
