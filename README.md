@@ -7,7 +7,7 @@
 
 Protect against heap fragmentation faults and improve execution speed with a fixed block alternative to STL std::allocator.
 
-Originally published on CodeProject at: <a href="https://www.codeproject.com/Articles/1089905/A-Custom-STL-std-allocator-Replacement-Improves-Pe"><strong>A Custom STL std::allocator Replacement Improves Performance</strong></a>
+Originally published on CodeProject at: <a href="https://www.codeproject.com/Articles/1089905/A-Custom-STL-std-allocator-Replacement-Improves-Pe">A Custom STL std::allocator Replacement Improves Performance</a>
 
 # Table of Contents
 
@@ -25,6 +25,7 @@ Originally published on CodeProject at: <a href="https://www.codeproject.com/Art
 - [Benchmarking](#benchmarking)
 - [Reference Articles](#reference-articles)
 - [Benefits](#benefits)
+- [Portable C/C++ Libraries](#portable-cc-libraries)
 
 
 # Getting Started
@@ -40,6 +41,7 @@ Originally published on CodeProject at: <a href="https://www.codeproject.com/Art
 
 * <a href="https://github.com/endurodave/Allocator">Allocator</a> - An efficient C++ fixed-block memory allocator.
 * <a href="https://github.com/endurodave/xallocator">xallocator</a> - A `malloc`/`free` fixed-block memory allocator replacement.  
+* [pmr_allocator](https://github.com/endurodave/pmr_allocator) - A C++ Polymorphic Memory Resource (PMR) fixed-block memory allocator. |
 
 # Introduction
 
@@ -494,6 +496,10 @@ myList.clear();</pre>
 <p>My goal with <code>stl_allocator</code> was eliminating memory faults; however, the fixed block allocator does offer faster and more consistent execution times whereas the heap does not. The heap implementation and level of fragmentation leads to unpredictable execution times. Depending on your application, this may or may not be an issue.</p>
 
 <p>As shown in this article, simply employing an STL-compatible fixed block allocator opens up the possibility of using C++ Standard Template Library features on a project that otherwise may not have been possible.&nbsp;</p>
+
+# Portable C/C++ Libraries
+
+Explore [portable-c-cpp-libs](https://github.com/endurodave/portable-c-cpp-libs) for reusable C/C++ components, including state machines, callbacks, threading, memory management, communication, fault handling, testing, and more.
 
 
 
