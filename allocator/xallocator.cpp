@@ -1,17 +1,34 @@
 #include "Allocator.h"
 #include "xallocator.h"
-#include "Fault.h"
 #include <cstring>
 #include <iostream>
 #include <mutex>
+#include <new>
+#include <assert.h>
 
 using namespace std;
 
-#ifndef CHAR_BIT
-#define CHAR_BIT	8 
+#define ASSERT() assert(false)
+#define ASSERT_TRUE(condition) assert(condition)
+
+#ifndef char_BIT
+#define char_BIT	8 
 #endif
 
-static BOOL _xallocInitialized = FALSE;
+// @TODO: Comment out to disable alignment check if desired after porting
+#define CHECK_ALIGNMENT
+
+// @TODO: Adjust header size to ensure the user's memory block maintains proper alignment.
+// Logic:
+// 1. We store an 'Allocator*' at the start of the raw block.
+// 2. The user's memory immediately follows this pointer.
+// 3. To support types like 'long double' or SSE/AVX vectors, the user's memory 
+//    must often be aligned to 16 bytes (on 64-bit) or 8 bytes (on 32-bit).
+//
+// Calculation:
+// - 64-bit System: Ptrs are 8 bytes. Next aligned boundary is 16. Set to 16.
+// - 32-bit System: Ptrs are 4 bytes. Next aligned boundary is 8. Set to 8.
+static const size_t BLOCK_HEADER_SIZE = sizeof(void*) > 4 ? 16 : 8;
 
 // Define STATIC_POOLS to switch from heap blocks mode to static pools mode
 //#define STATIC_POOLS 
@@ -22,18 +39,18 @@ static BOOL _xallocInitialized = FALSE;
 	#define MAX_BLOCKS		32
 
 	// Create static storage for each static allocator instance
-	CHAR* _allocator8 [sizeof(AllocatorPool<CHAR[8], MAX_BLOCKS>)];
-	CHAR* _allocator16 [sizeof(AllocatorPool<CHAR[16], MAX_BLOCKS>)];
-	CHAR* _allocator32 [sizeof(AllocatorPool<CHAR[32], MAX_BLOCKS>)];
-	CHAR* _allocator64 [sizeof(AllocatorPool<CHAR[64], MAX_BLOCKS>)];
-	CHAR* _allocator128 [sizeof(AllocatorPool<CHAR[128], MAX_BLOCKS>)];
-	CHAR* _allocator256 [sizeof(AllocatorPool<CHAR[256], MAX_BLOCKS>)];
-	CHAR* _allocator396 [sizeof(AllocatorPool<CHAR[396], MAX_BLOCKS>)];
-	CHAR* _allocator512 [sizeof(AllocatorPool<CHAR[512], MAX_BLOCKS>)];
-	CHAR* _allocator768 [sizeof(AllocatorPool<CHAR[768], MAX_BLOCKS>)];
-	CHAR* _allocator1024 [sizeof(AllocatorPool<CHAR[1024], MAX_BLOCKS>)];
-	CHAR* _allocator2048 [sizeof(AllocatorPool<CHAR[2048], MAX_BLOCKS>)];	
-	CHAR* _allocator4096 [sizeof(AllocatorPool<CHAR[4096], MAX_BLOCKS>)];
+	char* _allocator8 [sizeof(AllocatorPool<char[8], MAX_BLOCKS>)];
+	char* _allocator16 [sizeof(AllocatorPool<char[16], MAX_BLOCKS>)];
+	char* _allocator32 [sizeof(AllocatorPool<char[32], MAX_BLOCKS>)];
+	char* _allocator64 [sizeof(AllocatorPool<char[64], MAX_BLOCKS>)];
+	char* _allocator128 [sizeof(AllocatorPool<char[128], MAX_BLOCKS>)];
+	char* _allocator256 [sizeof(AllocatorPool<char[256], MAX_BLOCKS>)];
+	char* _allocator396 [sizeof(AllocatorPool<char[396], MAX_BLOCKS>)];
+	char* _allocator512 [sizeof(AllocatorPool<char[512], MAX_BLOCKS>)];
+	char* _allocator768 [sizeof(AllocatorPool<char[768], MAX_BLOCKS>)];
+	char* _allocator1024 [sizeof(AllocatorPool<char[1024], MAX_BLOCKS>)];
+	char* _allocator2048 [sizeof(AllocatorPool<char[2048], MAX_BLOCKS>)];	
+	char* _allocator4096 [sizeof(AllocatorPool<char[4096], MAX_BLOCKS>)];
 
 	// Array of pointers to all allocator instances
 	static Allocator* _allocators[MAX_ALLOCATORS];
@@ -57,7 +74,7 @@ static BOOL _xallocInitialized = FALSE;
 // and xalloc_destroy() before main exits. In all other situations
 // XallocInitDestroy must be used to call xalloc_init() and xalloc_destroy().
 #ifdef AUTOMATIC_XALLOCATOR_INIT_DESTROY
-INT XallocInitDestroy::refCount = 0;
+int32_t XallocInitDestroy::refCount = 0;
 XallocInitDestroy::XallocInitDestroy() 
 { 
 	// Track how many static instances of XallocInitDestroy are created
@@ -81,7 +98,7 @@ template <class T>
 T nexthigher(T k) 
 {
     k--;
-    for (size_t i=1; i<sizeof(T)*CHAR_BIT; i<<=1)
+    for (size_t i=1; i<sizeof(T)*char_BIT; i<<=1)
         k |= (k >> i);
     return k+1;
 }
@@ -92,22 +109,35 @@ static std::mutex& get_mutex()
 	return _mutex;
 }
 
-// Stored a pointer to the allocator instance within the block region. 
+#ifdef CHECK_ALIGNMENT
+#include <cstddef>  // for max_align_t
+#include <cstdio>   // for fprintf
+#include <assert.h>
+
+static void check_alignment(void* ptr)
+{
+	// Convert pointer to integer to perform bitwise check
+	uintptr_t address = reinterpret_cast<uintptr_t>(ptr);
+
+	// Check if the address is a multiple of BLOCK_HEADER_SIZE
+	if ((address & (BLOCK_HEADER_SIZE - 1)) != 0)
+	{
+		assert(false && "xmalloc returning misaligned memory");
+	}
+}
+#endif
+
+/// Stored a pointer to the allocator instance within the block region. 
 ///	a pointer to the client's area within the block.
 /// @param[in] block - a pointer to the raw memory block. 
 ///	@param[in] size - the client requested size of the memory block.
 /// @return	A pointer to the client's address within the raw memory block. 
 static inline void *set_block_allocator(void* block, Allocator* allocator)
 {
-	// Cast the raw block memory to a Allocator pointer
 	Allocator** pAllocatorInBlock = static_cast<Allocator**>(block);
-
-	// Write the size into the memory block
 	*pAllocatorInBlock = allocator;
-
-	// Advance the pointer past the Allocator* block size and return a pointer to
-	// the client's memory region
-	return ++pAllocatorInBlock;
+	// Advance by BLOCK_HEADER_SIZE bytes (cast to char* first to do byte math)
+	return (char*)block + BLOCK_HEADER_SIZE;
 }
 
 /// Gets the size of the memory block stored within the block.
@@ -115,13 +145,7 @@ static inline void *set_block_allocator(void* block, Allocator* allocator)
 /// @return	The original allocator instance stored in the memory block.
 static inline Allocator* get_block_allocator(void* block)
 {
-	// Cast the client memory to a Allocator pointer
-	Allocator** pAllocatorInBlock = static_cast<Allocator**>(block);
-
-	// Back up one Allocator* position to get the stored allocator instance
-	pAllocatorInBlock--;
-
-	// Return the allocator instance stored within the memory block
+	Allocator** pAllocatorInBlock = (Allocator**)((char*)block - BLOCK_HEADER_SIZE);
 	return *pAllocatorInBlock;
 }
 
@@ -130,11 +154,7 @@ static inline Allocator* get_block_allocator(void* block)
 /// @return	A pointer to the original raw memory block address. 
 static inline void *get_block_ptr(void* block)
 {
-	// Cast the client memory to a Allocator* pointer
-	Allocator** pAllocatorInBlock = static_cast<Allocator**>(block);
-
-	// Back up one Allocator* position and return the original raw memory block pointer
-	return --pAllocatorInBlock;
+	return (char*)block - BLOCK_HEADER_SIZE;
 }
 
 /// Returns an allocator instance matching the size provided
@@ -143,7 +163,7 @@ static inline void *get_block_ptr(void* block)
 /// if no allocator exists. 
 static inline Allocator* find_allocator(size_t size)
 {
-	for (INT i=0; i<MAX_ALLOCATORS; i++)
+	for (int i=0; i<MAX_ALLOCATORS; i++)
 	{
 		if (_allocators[i] == 0)
 			break;
@@ -159,7 +179,7 @@ static inline Allocator* find_allocator(size_t size)
 /// @param[in] allocator - An allocator instance
 static inline void insert_allocator(Allocator* allocator)
 {
-	for (INT i=0; i<MAX_ALLOCATORS; i++)
+	for (int i=0; i<MAX_ALLOCATORS; i++)
 	{
 		if (_allocators[i] == 0)
 		{
@@ -181,18 +201,18 @@ extern "C" void xalloc_init()
 	// For STATIC_POOLS mode, the allocators must be initialized before any other
 	// static user class constructor is run. Therefore, use placement new to initialize
 	// each allocator into the previously reserved static memory locations.
-	new (&_allocator8) AllocatorPool<CHAR[8], MAX_BLOCKS>();
-	new (&_allocator16) AllocatorPool<CHAR[16], MAX_BLOCKS>();
-	new (&_allocator32) AllocatorPool<CHAR[32], MAX_BLOCKS>();
-	new (&_allocator64) AllocatorPool<CHAR[64], MAX_BLOCKS>();
-	new (&_allocator128) AllocatorPool<CHAR[128], MAX_BLOCKS>();
-	new (&_allocator256) AllocatorPool<CHAR[256], MAX_BLOCKS>();
-	new (&_allocator396) AllocatorPool<CHAR[396], MAX_BLOCKS>();
-	new (&_allocator512) AllocatorPool<CHAR[512], MAX_BLOCKS>();
-	new (&_allocator768) AllocatorPool<CHAR[768], MAX_BLOCKS>();
-	new (&_allocator1024) AllocatorPool<CHAR[1024], MAX_BLOCKS>();
-	new (&_allocator2048) AllocatorPool<CHAR[2048], MAX_BLOCKS>();
-	new (&_allocator4096) AllocatorPool<CHAR[4096], MAX_BLOCKS>();
+	new (&_allocator8) AllocatorPool<char[8], MAX_BLOCKS>();
+	new (&_allocator16) AllocatorPool<char[16], MAX_BLOCKS>();
+	new (&_allocator32) AllocatorPool<char[32], MAX_BLOCKS>();
+	new (&_allocator64) AllocatorPool<char[64], MAX_BLOCKS>();
+	new (&_allocator128) AllocatorPool<char[128], MAX_BLOCKS>();
+	new (&_allocator256) AllocatorPool<char[256], MAX_BLOCKS>();
+	new (&_allocator396) AllocatorPool<char[396], MAX_BLOCKS>();
+	new (&_allocator512) AllocatorPool<char[512], MAX_BLOCKS>();
+	new (&_allocator768) AllocatorPool<char[768], MAX_BLOCKS>();
+	new (&_allocator1024) AllocatorPool<char[1024], MAX_BLOCKS>();
+	new (&_allocator2048) AllocatorPool<char[2048], MAX_BLOCKS>();
+	new (&_allocator4096) AllocatorPool<char[4096], MAX_BLOCKS>();
 
 	// Populate allocator array with all instances 
 	_allocators[0] = (Allocator*)&_allocator8;
@@ -219,13 +239,13 @@ extern "C" void xalloc_destroy()
 	get_mutex().lock();
 
 #ifdef STATIC_POOLS
-	for (INT i=0; i<MAX_ALLOCATORS; i++)
+	for (int i=0; i<MAX_ALLOCATORS; i++)
 	{
 		_allocators[i]->~Allocator();
 		_allocators[i] = 0;
 	}
 #else
-	for (INT i=0; i<MAX_ALLOCATORS; i++)
+	for (int i=0; i<MAX_ALLOCATORS; i++)
 	{
 		if (_allocators[i] == 0)
 			break;
@@ -250,7 +270,7 @@ extern "C" Allocator* xallocator_get_allocator(size_t size)
 	// within the block memory region. Most blocks are powers of two,
 	// however some common allocator block sizes can be explicitly defined
 	// to minimize wasted storage. This offers application specific tuning.
-	size_t blockSize = size + sizeof(Allocator*);
+	size_t blockSize = size + BLOCK_HEADER_SIZE;
 	if (blockSize > 256 && blockSize <= 396)
 		blockSize = 396;
 	else if (blockSize > 512 && blockSize <= 768)
@@ -287,13 +307,20 @@ extern "C" void *xmalloc(size_t size)
 
 	// Allocate a raw memory block 
 	Allocator* allocator = xallocator_get_allocator(size);
-	void* blockMemoryPtr = allocator->Allocate(sizeof(Allocator*) + size);
+	void* blockMemoryPtr = allocator->Allocate(size + BLOCK_HEADER_SIZE);
 
 	get_mutex().unlock();
 
 	// Set the block Allocator* within the raw memory block region
-	void* clientsMemoryPtr = set_block_allocator(blockMemoryPtr, allocator);
-	return clientsMemoryPtr;
+	void* userPtr = set_block_allocator(blockMemoryPtr, allocator);
+
+#ifdef CHECK_ALIGNMENT
+	// Verify memory alignment before returning to the user
+	check_alignment(blockMemoryPtr);
+	check_alignment(userPtr);
+#endif
+
+	return userPtr;
 }
 
 /// Frees a memory block previously allocated with xalloc. The blocks are returned
@@ -339,7 +366,7 @@ extern "C" void *xrealloc(void *oldMem, size_t size)
 		{
 			// Get the original allocator instance from the old memory block
 			Allocator* oldAllocator = get_block_allocator(oldMem);
-			size_t oldSize = oldAllocator->GetBlockSize() - sizeof(Allocator*);
+			size_t oldSize = oldAllocator->GetBlockSize() - BLOCK_HEADER_SIZE;
 
 			// Copy the bytes from the old memory block into the new (as much as will fit)
 			memcpy(newMem, oldMem, (oldSize < size) ? oldSize : size);
@@ -359,7 +386,7 @@ extern "C" void xalloc_stats()
 {
 	get_mutex().lock();
 
-	for (INT i=0; i<MAX_ALLOCATORS; i++)
+	for (int i=0; i<MAX_ALLOCATORS; i++)
 	{
 		if (_allocators[i] == 0)
 			break;

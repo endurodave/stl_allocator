@@ -5,7 +5,8 @@
 // David Lafreniere
 
 #include "xallocator.h"
-#include <memory>  // For std::allocator and std::allocator_traits
+#include <memory>    // For std::allocator and std::allocator_traits
+#include <utility>   // For std::forward
 
 // Forward declaration for stl_allocator<void>
 template <typename T>
@@ -63,9 +64,9 @@ public:
 
 // Comparison operators for compatibility
 template <typename T, typename U>
-inline bool operator==(const stl_allocator<T>&, const stl_allocator<U>) { return true; }
+inline bool operator==(const stl_allocator<T>&, const stl_allocator<U>&) { return true; }
 
 template <typename T, typename U>
-inline bool operator!=(const stl_allocator<T>&, const stl_allocator<U>) { return false; }
+inline bool operator!=(const stl_allocator<T>&, const stl_allocator<U>&) { return false; }
 
 #endif 

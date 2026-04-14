@@ -1,12 +1,20 @@
 #include <new>
 #include <iostream>
+#include <cassert>
+#if WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#endif
 #include "xlist.h"
 #include "xmap.h"
 #include "xqueue.h"
 #include "xset.h"
 #include "xsstream.h"
 #include "xstring.h"
-#include "Fault.h"
+#include "xallocator.h"
+
+#define ASSERT() assert(false)
 
 // @see https://github.com/endurodave/stl_allocator
 // David Lafreniere
@@ -34,12 +42,16 @@ static void out_of_memory()
 	ASSERT();
 }
 
+void AllocatorTests();
+
 //------------------------------------------------------------------------------
 // main
 //------------------------------------------------------------------------------
 int main(void)
 {
 	std::set_new_handler(out_of_memory);
+
+	AllocatorTests();
 
 	xlist<int> myList;
 	myList.push_back(123);

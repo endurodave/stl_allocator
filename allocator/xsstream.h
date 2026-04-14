@@ -10,5 +10,6 @@ typedef std::basic_ostringstream<char, std::char_traits<char>, stl_allocator<cha
 typedef std::basic_stringstream<wchar_t, std::char_traits<wchar_t>, stl_allocator<wchar_t> > xwstringstream;
 typedef std::basic_ostringstream<wchar_t, std::char_traits<wchar_t>, stl_allocator<wchar_t> > xwostringstream;
 
+
 #endif
 
