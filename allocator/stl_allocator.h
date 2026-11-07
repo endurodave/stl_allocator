@@ -48,13 +48,20 @@ public:
 	struct rebind { typedef stl_allocator<U> other; };
 
 	// Override allocate method to use custom allocation function
-	pointer allocate(size_type n, typename std::allocator_traits<stl_allocator<void>>::const_pointer hint = 0) 
+	// Throws std::bad_alloc (or aborts without exceptions) if no memory is
+	// available, as an allocator's allocate() must not return NULL
+	pointer allocate(size_type n, typename std::allocator_traits<stl_allocator<void>>::const_pointer /*hint*/ = 0) 
 	{
-		return static_cast<pointer>(xmalloc(n * sizeof(T)));
+		if (n > static_cast<size_type>(-1) / sizeof(T))
+			xalloc_bad_alloc();
+		void* p = xmalloc(n * sizeof(T));
+		if (!p)
+			xalloc_bad_alloc();
+		return static_cast<pointer>(p);
 	}
 
 	// Override deallocate method to use custom deallocation function
-	void deallocate(pointer p, size_type n) 
+	void deallocate(pointer p, size_type /*n*/) 
 	{
 		xfree(p);
 	}

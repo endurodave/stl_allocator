@@ -17,6 +17,7 @@
 /// types marshalled through make_tuple_heap).
 
 #include "xallocator.h"
+#include <utility>
 
 /// @brief Allocate and construct T in the fixed-block pool.
 /// @return Pointer to the constructed object, or nullptr if xmalloc fails.
@@ -25,7 +26,19 @@ inline T* xnew(Args&&... args)
 {
     void* mem = xmalloc(sizeof(T));
     if (!mem) return nullptr;
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+    try {
+        return ::new(mem) T(std::forward<Args>(args)...);
+    }
+    catch (...) {
+        // Return the block to the pool before propagating; otherwise a
+        // throwing T constructor permanently leaks a fixed block.
+        xfree(mem);
+        throw;
+    }
+#else
     return ::new(mem) T(std::forward<Args>(args)...);
+#endif
 }
 
 /// @brief Destroy T and return its memory to the fixed-block pool.

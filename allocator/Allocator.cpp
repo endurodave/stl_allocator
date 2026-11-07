@@ -9,7 +9,9 @@ Allocator::Allocator(size_t size, uint32_t objects, char* memory, const char* na
     m_blockSize(size < sizeof(long*) ? sizeof(long*):size),
     m_objectSize(size),
     m_maxObjects(objects),
+    m_allocatorMode(HEAP_BLOCKS),
     m_pHead(NULL),
+    m_pPool(NULL),
     m_poolIndex(0),
     m_blockCnt(0),
     m_blocksInUse(0),
@@ -17,7 +19,7 @@ Allocator::Allocator(size_t size, uint32_t objects, char* memory, const char* na
     m_deallocations(0),
     m_name(name)
 {
-    // If using a fixed memory pool 
+    // If using a fixed memory pool
 	if (m_maxObjects)
 	{
 		// If caller provided an external memory pool
@@ -26,14 +28,12 @@ Allocator::Allocator(size_t size, uint32_t objects, char* memory, const char* na
 			m_pPool = memory;
 			m_allocatorMode = STATIC_POOL;
 		}
-		else 
+		else
 		{
 			m_pPool = (char*)new char[m_blockSize * m_maxObjects];
 			m_allocatorMode = HEAP_POOL;
 		}
 	}
-	else
-		m_allocatorMode = HEAP_BLOCKS;
 }
 
 //------------------------------------------------------------------------------
@@ -41,7 +41,7 @@ Allocator::Allocator(size_t size, uint32_t objects, char* memory, const char* na
 //------------------------------------------------------------------------------
 Allocator::~Allocator()
 {
-	// If using pool then destroy it, otherwise traverse free-list and 
+	// If using pool then destroy it, otherwise traverse free-list and
 	// destroy each individual block
 	if (m_allocatorMode == HEAP_POOL)
 		delete [] m_pPool;
@@ -58,7 +58,8 @@ Allocator::~Allocator()
 void* Allocator::Allocate(size_t size)
 {
     assert(size <= m_objectSize);
-	
+    (void)size;
+
     // If can't obtain existing block then get a new one
     void* pBlock = Pop();
     if (!pBlock)
@@ -74,27 +75,35 @@ void* Allocator::Allocate(size_t size)
             }
             else
             {
-                // Get the pointer to the new handler
-                std::new_handler handler = std::set_new_handler(0);
-                std::set_new_handler(handler);
-
-                // If a new handler is defined, call it
-                if (handler)
+                // Pool exhausted. As operator new does, call the new-handler and
+                // retry until a block is free; the handler must free a block,
+                // throw or abort. With no handler, fail and return NULL.
+                while (!pBlock)
+                {
+                    std::new_handler handler = std::get_new_handler();
+                    if (!handler)
+                        break;
                     (*handler)();
-                else
-                    assert(0);
+                    pBlock = Pop();
+                }
             }
         }
         else
         {
-        	m_blockCnt++;
-            pBlock = (void*)new char[m_blockSize];
+            // nothrow: Allocate() reports failure by returning NULL
+            pBlock = (void*)new (std::nothrow) char[m_blockSize];
+            if (pBlock)
+                m_blockCnt++;
         }
     }
 
-    m_blocksInUse++;
-    m_allocations++;
-	
+    // Count only blocks actually handed out
+    if (pBlock)
+    {
+        m_blocksInUse++;
+        m_allocations++;
+    }
+
     return pBlock;
 }
 
@@ -103,9 +112,24 @@ void* Allocator::Allocate(size_t size)
 //------------------------------------------------------------------------------
 void Allocator::Deallocate(void* pBlock)
 {
+    // delete of a null pointer may call operator delete(NULL)
+    if (!pBlock)
+        return;
+
     Push(pBlock);
 	m_blocksInUse--;
 	m_deallocations++;
+}
+
+//------------------------------------------------------------------------------
+// AccountAlloc
+//------------------------------------------------------------------------------
+void Allocator::AccountAlloc(bool newBlock)
+{
+    if (newBlock)
+        m_blockCnt++;
+    m_blocksInUse++;
+    m_allocations++;
 }
 
 //------------------------------------------------------------------------------
@@ -133,8 +157,3 @@ void* Allocator::Pop()
 
     return (void*)pBlock;
 }
-
-
-
-
-

@@ -3,7 +3,7 @@
 
 #include "stl_allocator.h"
 #include <queue>
-#include <list>
+#include <deque>
 
 // xqueue uses a fix-block memory allocator
 template <typename T, typename Alloc = stl_allocator<T>>

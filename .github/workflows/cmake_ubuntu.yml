@@ -3,10 +3,10 @@ name: Ubuntu
 on:
   push:
     branches:
-      - master  # Trigger on push 
+      - master  # Trigger on push to 'master' branch
   pull_request:
     branches:
-      - master   # Trigger on pull 
+      - master  # Trigger on pull request targeting 'master' branch
 
 jobs:
   build:
@@ -14,13 +14,13 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4  # Checkout the repository code
+      uses: actions/checkout@v7  # Checkout the repository code
 
     - name: Configure CMake
-      run: cmake -S . -B build # Configure CMake to generate build files in 'build' directory
+      run: cmake -S . -B build  # Configure CMake to generate build files in 'build' directory
 
     - name: Build
       run: cmake --build build  # Build the project using CMake
 
     - name: Run stl_allocator_app
-      run: ./build/stl_allocator_app  # Run the built executable
+      run: ./build/stl_allocator_app  # Run the demos and unit tests; non-zero exit on failure

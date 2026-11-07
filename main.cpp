@@ -1,6 +1,7 @@
 #include <new>
 #include <iostream>
 #include <cassert>
+#include <cstdlib>
 #if WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -38,11 +39,13 @@ void Benchmark(const char* name, TestFunc testFunc);
 
 static void out_of_memory()
 {
-	// new-handler function called by Allocator when pool is out of memory
-	ASSERT();
+	// new-handler called when memory runs out. Allocate() retries after it
+	// returns, as operator new does, so it must free memory, throw or abort.
+	std::cerr << "out of memory" << std::endl;
+	std::abort();
 }
 
-void AllocatorTests();
+int AllocatorTests();
 
 //------------------------------------------------------------------------------
 // main
@@ -50,8 +53,6 @@ void AllocatorTests();
 int main(void)
 {
 	std::set_new_handler(out_of_memory);
-
-	AllocatorTests();
 
 	xlist<int> myList;
 	myList.push_back(123);
@@ -99,7 +100,10 @@ int main(void)
 	Benchmark("xstring Fixed Block (Run 3)", StringFixedBlockTest);
 
 	xalloc_stats();
-	return 0;
+
+	// Unit tests (tests/AllocatorTests.cpp), last: one fills the xallocator
+	// allocator table. Non-zero exit on failure.
+	return AllocatorTests() == 0 ? 0 : 1;
 }
 
 //------------------------------------------------------------------------------

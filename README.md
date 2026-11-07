@@ -1,3 +1,8 @@
+![License MIT](https://img.shields.io/github/license/BehaviorTree/BehaviorTree.CPP?color=blue)
+[![conan Ubuntu](https://github.com/endurodave/stl_allocator/actions/workflows/cmake_ubuntu.yml/badge.svg)](https://github.com/endurodave/stl_allocator/actions/workflows/cmake_ubuntu.yml)
+[![conan Ubuntu](https://github.com/endurodave/stl_allocator/actions/workflows/cmake_clang.yml/badge.svg)](https://github.com/endurodave/stl_allocator/actions/workflows/cmake_clang.yml)
+[![conan Windows](https://github.com/endurodave/stl_allocator/actions/workflows/cmake_windows.yml/badge.svg)](https://github.com/endurodave/stl_allocator/actions/workflows/cmake_windows.yml)
+
 # stl_allocator
 A custom STL `std::allocator` replacement to improve performance and prevent heap fragmentation.
 
@@ -65,13 +70,15 @@ MyClass* p = xnew<MyClass>(args...);
 xdelete(p);
 ```
 
+If the constructor throws, `xnew` returns the block to the pool before rethrowing. It returns `nullptr` if no block is available.
+
 ## Getting Started
 CMake is used to create the project build files:
 
 1. Clone the repository.
 2. From the repository root, run: `cmake -B build .`
 3. Build the project: `cmake --build build --config Release`
-4. Run the benchmarks and tests: `.\build\Release\stl_allocator_app.exe`
+4. Run the benchmarks and tests: `.\build\Release\stl_allocator_app.exe`. The unit tests in `tests/AllocatorTests.cpp` run last, and the app exits non-zero if one fails.
 
 # Technical Details
 
@@ -83,6 +90,8 @@ The underlying engine is `xallocator`, a C-style fixed-block allocator. It has t
 1. **Static Pools:** Memory is obtained from pre-declared static arrays (zero heap usage).
 2. **Heap Blocks:** Blocks are obtained from the global heap as needed but recycled into free-lists once freed.
 
+Every block is aligned for any type (`std::max_align_t`), and block sizes are powers of two. Like `malloc()`, `xmalloc()` returns `NULL` when it can't provide a block (out of memory, an exhausted static pool, or a size too large to round up).
+
 ## stl_allocator Implementation
 `stl_allocator<T>` is a standard-compliant C++ allocator that wraps `xmalloc` and `xfree`.
 
@@ -92,7 +101,13 @@ class stl_allocator : public std::allocator<T>
 {
 public:
 	pointer allocate(size_type n, ...) {
-		return static_cast<pointer>(xmalloc(n * sizeof(T)));
+		// Throws std::bad_alloc if n * sizeof(T) overflows or xmalloc fails
+		if (n > static_cast<size_type>(-1) / sizeof(T))
+			xalloc_bad_alloc();
+		void* p = xmalloc(n * sizeof(T));
+		if (!p)
+			xalloc_bad_alloc();
+		return static_cast<pointer>(p);
 	}
 	void deallocate(pointer p, size_type n) {
 		xfree(p);
