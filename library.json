@@ -1,0 +1,38 @@
+{
+  "name": "stl_allocator",
+  "version": "1.1.0",
+  "description": "Fixed block std::allocator for C++ standard library containers: xlist, xmap, xset, xstring, xmake_shared and more. Faster than the heap and no fragmentation.",
+  "keywords": ["allocator", "stl", "std allocator", "memory pool", "fixed block", "containers", "heap", "embedded", "cpp"],
+  "repository": { "type": "git", "url": "https://github.com/endurodave/stl_allocator.git" },
+  "authors": [{ "name": "David Lafreniere", "url": "https://github.com/endurodave", "maintainer": true }],
+  "license": "MIT",
+  "homepage": "https://github.com/endurodave/stl_allocator",
+  "frameworks": "*",
+  "platforms": "*",
+  "headers": ["stl_allocator.h", "xlist.h", "xmap.h", "xset.h", "xstring.h", "xmake_shared.h"],
+  "dependencies": [
+    { "owner": "endurodave", "name": "xallocator", "version": "^1.1.0" }
+  ],
+  "export": {
+    "include": [
+      "allocator/stl_allocator.h", "allocator/xlist.h", "allocator/xmap.h",
+      "allocator/xqueue.h", "allocator/xset.h", "allocator/xsstream.h",
+      "allocator/xstring.h", "allocator/xmake_shared.h", "allocator/xnew.h",
+      "LICENSE", "README.md", "library.json",
+      "examples/platformio/stl_allocator-demo/platformio.ini",
+      "examples/platformio/stl_allocator-demo/src/main.cpp"
+    ]
+  },
+  "build": {
+    "srcDir": "allocator",
+    "includeDir": "allocator",
+    "srcFilter": ["-<*>"]
+  },
+  "examples": [
+    {
+      "name": "stl_allocator-demo",
+      "base": "examples/platformio/stl_allocator-demo",
+      "files": ["platformio.ini", "src/main.cpp"]
+    }
+  ]
+}
