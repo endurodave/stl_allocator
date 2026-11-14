@@ -1,7 +1,8 @@
-![License MIT](https://img.shields.io/github/license/BehaviorTree/BehaviorTree.CPP?color=blue)
+![License MIT](https://img.shields.io/github/license/endurodave/stl_allocator?color=blue)
 [![conan Ubuntu](https://github.com/endurodave/stl_allocator/actions/workflows/cmake_ubuntu.yml/badge.svg)](https://github.com/endurodave/stl_allocator/actions/workflows/cmake_ubuntu.yml)
 [![conan Ubuntu](https://github.com/endurodave/stl_allocator/actions/workflows/cmake_clang.yml/badge.svg)](https://github.com/endurodave/stl_allocator/actions/workflows/cmake_clang.yml)
 [![conan Windows](https://github.com/endurodave/stl_allocator/actions/workflows/cmake_windows.yml/badge.svg)](https://github.com/endurodave/stl_allocator/actions/workflows/cmake_windows.yml)
+[![PlatformIO](https://github.com/endurodave/stl_allocator/actions/workflows/platformio.yml/badge.svg)](https://github.com/endurodave/stl_allocator/actions/workflows/platformio.yml)
 
 # stl_allocator
 A custom STL `std::allocator` replacement to improve performance and prevent heap fragmentation.
@@ -80,6 +81,26 @@ CMake is used to create the project build files:
 3. Build the project: `cmake --build build --config Release`
 4. Run the benchmarks and tests: `.\build\Release\stl_allocator_app.exe`. The unit tests in `tests/AllocatorTests.cpp` run last, and the app exits non-zero if one fails.
 
+### PlatformIO
+
+`stl_allocator` is in the [PlatformIO registry](https://registry.platformio.org/libraries/endurodave/stl_allocator). Add it to your project's `platformio.ini`:
+
+```ini
+lib_deps = endurodave/stl_allocator@^1.1.0
+```
+
+PlatformIO also installs [xallocator](https://registry.platformio.org/libraries/endurodave/xallocator), which provides the fixed blocks. Then `#include "xlist.h"`, `"xmap.h"`, `"xstring.h"` and so on. The library needs C++11 and builds on any Arduino core with a C++ standard library (ESP32, STM32, RP2040, ...) and on the desktop (`platform = native`). 8-bit AVR boards are not supported.
+
+xallocator locks with `std::mutex` where the C++ library has it (ESP32, desktop). On an RTOS, add the lock option for your OS, e.g. `build_flags = -DXALLOC_LOCK_FREERTOS` (also `THREADX`, `ZEPHYR` and `CMSIS_RTOS2`); see xallocator's [Porting Issues](https://github.com/endurodave/xallocator#porting-issues).
+
+The [stl_allocator-demo](https://github.com/endurodave/stl_allocator/tree/master/examples/platformio/stl_allocator-demo) example runs on ESP32, ESP32-C3, STM32 Nucleo-F401RE, STM32F4 Discovery, Raspberry Pi Pico and the desktop:
+
+```shell
+cd examples/platformio/stl_allocator-demo
+pio run -e esp32dev -t upload -t monitor
+pio run -e native -t exec
+```
+
 # Technical Details
 
 ## std::allocator
@@ -145,4 +166,4 @@ Explore [portable-c-cpp-libs](https://github.com/endurodave/portable-c-cpp-libs)
 - [xallocator](https://github.com/endurodave/xallocator) - C fixed-block memory allocator.
 
 ## License
-Licensed under the MIT License. See [LICENSE](LICENSE) for details.
+Licensed under the MIT License. See [LICENSE](https://github.com/endurodave/stl_allocator/blob/master/LICENSE) for details.
