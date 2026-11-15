@@ -12,13 +12,15 @@ cmake_minimum_required(VERSION 3.10)
 # Project name and language (C or C++)
 project(stl_allocator VERSION 1.0 LANGUAGES CXX)
 
-# Collect all .cpp and *.h source files in the current directory, allocator, and tests directory
-file(GLOB SOURCES "${CMAKE_SOURCE_DIR}/*.cpp" "${CMAKE_SOURCE_DIR}/*.h" 
+# The library headers (src/, the Arduino library layout), the copies of
+# Allocator and xallocator they build on (allocator/), and the desktop demo
+# and unit tests (examples/desktop)
+file(GLOB SOURCES "${CMAKE_SOURCE_DIR}/src/*.h"
                   "${CMAKE_SOURCE_DIR}/allocator/*.cpp" "${CMAKE_SOURCE_DIR}/allocator/*.h"
-                  "${CMAKE_SOURCE_DIR}/tests/*.cpp" "${CMAKE_SOURCE_DIR}/tests/*.h")
+                  "${CMAKE_SOURCE_DIR}/examples/desktop/*.cpp" "${CMAKE_SOURCE_DIR}/examples/desktop/*.h")
 
 # Add include directories
-include_directories(allocator)
+include_directories(src allocator)
 
 # Define DMQ_ALLOCATOR
 add_definitions(-DDMQ_ALLOCATOR)

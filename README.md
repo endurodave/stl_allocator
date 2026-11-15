@@ -3,6 +3,7 @@
 [![conan Ubuntu](https://github.com/endurodave/stl_allocator/actions/workflows/cmake_clang.yml/badge.svg)](https://github.com/endurodave/stl_allocator/actions/workflows/cmake_clang.yml)
 [![conan Windows](https://github.com/endurodave/stl_allocator/actions/workflows/cmake_windows.yml/badge.svg)](https://github.com/endurodave/stl_allocator/actions/workflows/cmake_windows.yml)
 [![PlatformIO](https://github.com/endurodave/stl_allocator/actions/workflows/platformio.yml/badge.svg)](https://github.com/endurodave/stl_allocator/actions/workflows/platformio.yml)
+[![Arduino](https://github.com/endurodave/stl_allocator/actions/workflows/arduino.yml/badge.svg)](https://github.com/endurodave/stl_allocator/actions/workflows/arduino.yml)
 
 # stl_allocator
 A custom STL `std::allocator` replacement to improve performance and prevent heap fragmentation.
@@ -79,14 +80,20 @@ CMake is used to create the project build files:
 1. Clone the repository.
 2. From the repository root, run: `cmake -B build .`
 3. Build the project: `cmake --build build --config Release`
-4. Run the benchmarks and tests: `.\build\Release\stl_allocator_app.exe`. The unit tests in `tests/AllocatorTests.cpp` run last, and the app exits non-zero if one fails.
+4. Run the benchmarks and tests: `.\build\Release\stl_allocator_app.exe`. The unit tests in `examples/desktop/AllocatorTests.cpp` run last, and the app exits non-zero if one fails.
+
+The library is the `src` folder (header only: `stl_allocator.h` and the `x*.h` aliases). The CMake build uses the copies of [Allocator](https://github.com/endurodave/Allocator) and [xallocator](https://github.com/endurodave/xallocator) in the `allocator` folder.
+
+### Arduino
+
+`stl_allocator` is an Arduino library. In the Arduino IDE, install **stl_allocator** from the Library Manager (Sketch &rarr; Include Library &rarr; Manage Libraries); it installs xallocator and Allocator with it. Then `#include <xlist.h>`, `<xmap.h>`, `<xstring.h>` and so on, and see File &rarr; Examples &rarr; stl_allocator &rarr; stl_allocator_Demo. It needs a board with a full C++ standard library: UNO R4, Zero/MKR (SAMD), ESP32, RP2040, STM32 and similar; 8-bit AVR boards and the Due aren't supported.
 
 ### PlatformIO
 
 `stl_allocator` is in the [PlatformIO registry](https://registry.platformio.org/libraries/endurodave/stl_allocator). Add it to your project's `platformio.ini`:
 
 ```ini
-lib_deps = endurodave/stl_allocator@^1.1.0
+lib_deps = endurodave/stl_allocator@^1.2.0
 ```
 
 PlatformIO also installs [xallocator](https://registry.platformio.org/libraries/endurodave/xallocator), which provides the fixed blocks. Then `#include "xlist.h"`, `"xmap.h"`, `"xstring.h"` and so on. The library needs C++11 and builds on any Arduino core with a C++ standard library (ESP32, STM32, RP2040, ...) and on the desktop (`platform = native`). 8-bit AVR boards are not supported.
