@@ -31,13 +31,23 @@
 /// any static user objects relying on xallocator will be destroyed first before
 /// xalloc_destroy() is called.
 /// Embedded systems that never exit can remove the XallocInitDestroy class entirely.
+// Static construction and destruction run on one thread, so the count only
+// needs atomics where they are cheap: ARMv6-M (Cortex-M0/M0+, e.g. Arduino
+// Zero) has no atomic instructions and its cores don't provide the library
+// calls std::atomic falls back to.
+#if defined(__ARM_ARCH_6M__)
+typedef int32_t XallocRefCount;
+#else
+typedef std::atomic<int32_t> XallocRefCount;
+#endif
+
 class XallocInitDestroy
 {
 public:
 	XallocInitDestroy();
 	~XallocInitDestroy();
 private:
-	static std::atomic<int32_t> refCount;
+	static XallocRefCount refCount;
 };
 static XallocInitDestroy xallocInitDestroy;
 #endif	// AUTOMATIC_XALLOCATOR_INIT_DESTROY
